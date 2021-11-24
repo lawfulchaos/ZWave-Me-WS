@@ -1,9 +1,11 @@
 [tool.poetry]
 name = "zwave_me_ws"
-version = "0.1.15"
+version = "0.1.1"
 description = "Library, implementing websocket connection to ZWave-Me"
 authors = ["Dmitry Vlasov <kerbalspacema@gmail.com>"]
 license = "MIT"
+repository = "https://github.com/lawfulchaos/ZWave-Me-WS"
+readme = 'README.md'
 
 [tool.poetry.dependencies]
 python = "^3.8"
