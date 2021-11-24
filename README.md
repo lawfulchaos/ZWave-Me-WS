@@ -7,5 +7,8 @@ To install this package use:
 
 To use the connector:
 
-`from zwave_me_ws import ZWaveMe
-api = ZWaveMe()`
+```
+from zwave_me_ws import ZWaveMe
+
+api = ZWaveMe()
+```
