@@ -2,6 +2,7 @@ import json
 import threading
 
 from .WebsocketListener import WebsocketListener
+from .helpers import prepare_devices
 import time
 
 
@@ -18,9 +19,9 @@ class ZWaveMe:
         self.platforms = platforms
         self._ws = None
         self._wshost = None
-        self.start_ws()
         self.thread = None
         self.devices = []
+        self.start_ws()
 
     def start_ws(self):
         """get/find the websocket host"""
@@ -90,16 +91,25 @@ class ZWaveMe:
                             for device in body["data"]["devices"]
                             if device["deviceType"] in self.platforms
                         ]
-                        self.on_device_create(self.devices)
+                        self.on_device_create(prepare_devices(self.devices))
                     elif "id" in body['data']:
-                        self.on_new_device(body['data'])
+                        new_device = prepare_devices([body['data'], ])[0]
+                        self.on_new_device(new_device)
                 elif dict_data["type"] == "me.z-wave.devices.level":
-                    self.on_device_update(dict_data["data"])
+                    device = prepare_devices([dict_data['data'], ])[0]
+                    if device.deviceType == "sensorMultilevel":
+                        device.level = str(round(
+                            float(dict_data['data']["metrics"]["level"]), 1))
+
+                    self.on_device_update(device)
+
                 elif dict_data["type"] == "me.z-wave.namespaces.update":
                     for data in dict_data['data']:
                         if data['id'] == 'devices_all':
-                            new_devices = [x['deviceId'] for x in data['params']]
-                            devices_to_install = set(new_devices)-set([x['id'] for x in self.devices])
+                            new_devices = [x['deviceId'] for x in
+                                           data['params']]
+                            devices_to_install = set(new_devices) - set(
+                                [x['id'] for x in self.devices])
                             for device in devices_to_install:
                                 self.get_device_info(device)
             except Exception as e:
@@ -110,7 +120,6 @@ class ZWaveMe:
 
     def on_close(self, _, *args):
         self._ws.connected = False
-
 
     def get_ws(self):
         return self._ws

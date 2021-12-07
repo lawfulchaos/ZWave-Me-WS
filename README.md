@@ -12,3 +12,4 @@ from zwave_me_ws import ZWaveMe
 
 api = ZWaveMe()
 ```
+
