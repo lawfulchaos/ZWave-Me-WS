@@ -1,3 +1,4 @@
+import asyncio
 import json
 import threading
 import time
@@ -30,6 +31,11 @@ class WebsocketListener(threading.Thread, websocket.WebSocketApp):
 
         self.connected = False
         self.last_update = time.time()
+
+    async def connect(self):
+        while not self.connected:
+            await asyncio.sleep(0.1)
+        return self.connected
 
     def on_open(self, *args):
         self.connected = True

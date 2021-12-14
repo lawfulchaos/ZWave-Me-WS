@@ -1,3 +1,4 @@
+import asyncio
 import json
 import threading
 
@@ -24,10 +25,17 @@ class ZWaveMe:
         self.start_ws()
 
     def start_ws(self):
-        """get/find the websocket host"""
         self.thread = threading.Thread(target=self.init_websocket)
         self.thread.daemon = True
         self.thread.start()
+
+    async def get_connection(self):
+        """verify connection"""
+        try:
+            await asyncio.wait_for(self._ws.connect(), timeout=10.0)
+            return True
+        except asyncio.TimeoutError:
+            return False
 
     def send_command(self, device_id, command):
         self._ws.send(
@@ -40,6 +48,16 @@ class ZWaveMe:
                             device_id, command
                         )
                     }
+                }
+            )
+        )
+
+    def get_devices(self):
+        self._ws.send(
+            json.dumps(
+                {
+                    "event": "httpEncapsulatedRequest",
+                    "data": {"method": "GET", "url": "/ZAutomation/api/v1/devices"}
                 }
             )
         )

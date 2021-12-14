@@ -20,7 +20,7 @@ class ZWaveMeData:
     isFailed: bool = False
 
 
-def prepare_devices(devices: list) -> list[ZWaveMeData]:
+def prepare_devices(devices: list) -> list:
     prepared_devices = []
     for device in devices:
         prepared_device = {
