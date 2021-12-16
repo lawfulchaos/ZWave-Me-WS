@@ -45,6 +45,7 @@ class WebsocketListener(threading.Thread, websocket.WebSocketApp):
             json.dumps(
                 {
                     "event": "httpEncapsulatedRequest",
+                    "responseEvent": "get_devices",
                     "data": {"method": "GET", "url": "/ZAutomation/api/v1/devices"}
                 }
             )
