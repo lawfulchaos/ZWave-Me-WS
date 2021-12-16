@@ -10,11 +10,12 @@ import time
 class ZWaveMe:
     """Main controller class"""
 
-    def __init__(self, on_device_create, on_device_update, on_new_device,
-                 url, token, platforms=None):
+    def __init__(self, url, token, on_info=None, on_device_create=None,
+                 on_device_update=None, on_new_device=None, platforms=None):
         self.on_device_create = on_device_create
         self.on_device_update = on_device_update
         self.on_new_device = on_new_device
+        self.on_info = on_info
         self.url = url
         self.token = token
         self.platforms = platforms
@@ -22,7 +23,6 @@ class ZWaveMe:
         self._wshost = None
         self.thread = None
         self.devices = []
-        self.start_ws()
 
     def start_ws(self):
         self.thread = threading.Thread(target=self.init_websocket)
@@ -31,6 +31,7 @@ class ZWaveMe:
 
     async def get_connection(self):
         """verify connection"""
+        self.start_ws()
         try:
             await asyncio.wait_for(self._ws.connect(), timeout=10.0)
             return True
@@ -57,6 +58,7 @@ class ZWaveMe:
             json.dumps(
                 {
                     "event": "httpEncapsulatedRequest",
+                    "responseEvent": "get_devices",
                     "data": {"method": "GET", "url": "/ZAutomation/api/v1/devices"}
                 }
             )
@@ -67,12 +69,24 @@ class ZWaveMe:
             json.dumps(
                 {
                     "event": "httpEncapsulatedRequest",
+                    "responseEvent": "get_device_info",
                     "data": {
                         "method": "GET",
                         "url": "/ZAutomation/api/v1/devices/{}".format(
                             device_id
                         )
                     }
+                }
+            )
+        )
+
+    def get_info(self):
+        self._ws.send(
+            json.dumps(
+                {
+                    "event": "httpEncapsulatedRequest",
+                    "responseEvent": "get_info",
+                    "data": {"method": "GET", "url": "/ZAutomation/api/v1/devices"}
                 }
             )
         )
@@ -101,7 +115,9 @@ class ZWaveMe:
             if "type" not in dict_data.keys():
                 return
             try:
-                if dict_data["type"] == "ws-reply":
+                if dict_data["type"] == "get_devices":
+                    if "data" not in dict_data or "body" not in dict_data["data"]:
+                        return
                     body = json.loads(dict_data["data"]["body"])
                     if "devices" in body["data"]:
                         self.devices = [
@@ -110,7 +126,11 @@ class ZWaveMe:
                             if device["deviceType"] in self.platforms
                         ]
                         self.on_device_create(prepare_devices(self.devices))
-                    elif "id" in body['data']:
+                elif dict_data["type"] == "get_device_info":
+                    if "data" not in dict_data or "body" not in dict_data["data"]:
+                        return
+                    body = json.loads(dict_data["data"]["body"])
+                    if "id" in body['data']:
                         new_device = prepare_devices([body['data'], ])[0]
                         self.on_new_device(new_device)
                 elif dict_data["type"] == "me.z-wave.devices.level":
@@ -130,6 +150,10 @@ class ZWaveMe:
                                 [x['id'] for x in self.devices])
                             for device in devices_to_install:
                                 self.get_device_info(device)
+                elif dict_data["type"] == "get_info":
+                    uuid = json.loads(dict_data["data"]["body"]["data"]["uuid"])
+                    if uuid and uuid is not None:
+                        self.on_info(uuid)
             except Exception as e:
                 pass
 
