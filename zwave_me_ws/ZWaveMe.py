@@ -10,12 +10,11 @@ import time
 class ZWaveMe:
     """Main controller class"""
 
-    def __init__(self, url, token, on_info=None, on_device_create=None,
+    def __init__(self, url, token, on_device_create=None,
                  on_device_update=None, on_new_device=None, platforms=None):
         self.on_device_create = on_device_create
         self.on_device_update = on_device_update
         self.on_new_device = on_new_device
-        self.on_info = on_info
         self.url = url
         self.token = token
         self.platforms = platforms
@@ -23,6 +22,7 @@ class ZWaveMe:
         self._wshost = None
         self.thread = None
         self.devices = []
+        self.uuid = None
 
     def start_ws(self):
         self.thread = threading.Thread(target=self.init_websocket)
@@ -37,6 +37,23 @@ class ZWaveMe:
             return True
         except asyncio.TimeoutError:
             return False
+
+    async def wait_for_info(self):
+        while not self.uuid:
+            await asyncio.sleep(0.1)
+        return self.uuid
+
+    async def close_ws(self):
+        self._ws.close()
+
+    async def get_uuid(self):
+        """Get uuid info"""
+        self.get_info()
+        try:
+            await asyncio.wait_for(self.wait_for_info(), timeout=5.0)
+            return self.uuid
+        except asyncio.TimeoutError:
+            return
 
     def send_command(self, device_id, command):
         self._ws.send(
@@ -153,7 +170,7 @@ class ZWaveMe:
                 elif dict_data["type"] == "get_info":
                     uuid = json.loads(dict_data["data"]["body"]["data"]["uuid"])
                     if uuid and uuid is not None:
-                        self.on_info(uuid)
+                        self.uuid = uuid
             except Exception as e:
                 pass
 
